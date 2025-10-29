@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Tiefseetaucher – Vertikaler Zahlenstrahl</title>
+<style>
+  body {
+    margin: 0;
+    overflow: hidden;
+    font-family: 'Comic Sans MS', sans-serif;
+    background: linear-gradient(#4fc3f7, #01579b);
+    color: white;
+    text-align: center;
+  }
+  #gameCanvas {
+    display: block;
+    margin: 0 auto;
+    background: linear-gradient(#4fc3f7, #01579b);
+    border: 4px solid #fff;
+    border-radius: 12px;
+  }
+  #ui {
+    position: absolute;
+    top: 10px;
+    width: 100%;
+    text-align: center;
+  }
+  input {
+    font-size: 1.2rem;
+    padding: 6px;
+    border-radius: 8px;
+    border: none;
+    text-align: center;
+  }
+  button {
+    font-size: 1.2rem;
+    padding: 6px 12px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    background-color: #81d4fa;
+  }
+  .info {
+    margin-top: 6px;
+  }
+</style>
+</head>
+<body>
+  <div id="ui">
+    <h1>🌊 Tiefseetaucher – Durch den Zahlenraum 🌊</h1>
+    <div class="info">Aktuelle Höhe: <span id="currentHeight">0</span> | Zielhöhe: <span id="targetHeight">0</span></div>
+    <div class="info">Welche Zahl muss addiert werden?</div>
+    <input type="number" id="answer" />
+    <button onclick="checkAnswer()">Antwort prüfen</button>
+    <div class="info">Aufgabe <span id="round">1</span>/10 | Punkte: <span id="score">0</span></div>
+    <div id="feedback" style="height:20px;font-weight:bold;"></div>
+  </div>
+
+  <canvas id="gameCanvas" width="800" height="500"></canvas>
+
+  <script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+
+    let diverY = 250; // aktuelle Y-Position (in Pixeln)
+    let currentHeight = 0;
+    let targetHeight = 0;
+    let round = 1;
+    let score = 0;
+    let animOffset = 0;
+    let gameActive = true;
+
+    const minHeight = -50;
+    const maxHeight = 50;
+
+    function randomHeight() {
+      return Math.floor(Math.random() * (maxHeight - minHeight + 1)) + minHeight;
+    }
+
+    function newTask() {
+      currentHeight = targetHeight;
+      targetHeight = randomHeight();
+      document.getElementById('currentHeight').textContent = currentHeight;
+      document.getElementById('targetHeight').textContent = targetHeight;
+      document.getElementById('answer').value = '';
+      document.getElementById('feedback').textContent = '';
+    }
+
+    function checkAnswer() {
+      if (!gameActive) return;
+      const answer = Number(document.getElementById('answer').value);
+      const correct = targetHeight - currentHeight;
+      if (answer === correct) {
+        score++;
+        document.getElementById('score').textContent = score;
+        document.getElementById('feedback').textContent = '✅ Richtig!';
+        moveDiverToTarget();
+      } else {
+		moveDiverToTarget();
+        document.getElementById('feedback').textContent = '❌ Falsch! Richtige Antwort: ' + correct;
+      }
+    }
+
+    function moveDiverToTarget() {
+      const targetY = heightToY(targetHeight);
+      const interval = setInterval(() => {
+        if (Math.abs(diverY - targetY) < 1) {
+          diverY = targetY;
+          clearInterval(interval);
+          nextRound();
+        } else {
+          diverY += (targetY - diverY) * 0.1;
+          draw();
+        }
+      }, 30);
+    }
+
+    function nextRound() {
+      if (round >= 10) {
+        document.getElementById('feedback').textContent += ` | Spielende! Punkte: ${score}/10`;
+        gameActive = false;
+        return;
+      }
+      round++;
+      document.getElementById('round').textContent = round;
+      newTask();
+    }
+
+    function drawDiver(x, y) {
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.fillStyle = '#ffcc80';
+      ctx.beginPath();
+      ctx.arc(0, 0, 15, 0, Math.PI * 2); // Kopf
+      ctx.fill();
+
+      ctx.fillStyle = '#4db6ac';
+      ctx.fillRect(-10, 10, 20, 30); // Körper
+
+      ctx.fillStyle = '#00796b';
+      ctx.beginPath();
+      ctx.moveTo(-15, 40);
+      ctx.lineTo(0, 60);
+      ctx.lineTo(15, 40);
+      ctx.fill(); // Flossen
+
+      ctx.restore();
+    }
+
+    function drawTarget(y) {
+      ctx.strokeStyle = '#76ff03';
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.rect(130, y - 20, 50, 40);
+      ctx.stroke();
+    }
+
+    function heightToY(height) {
+      // Map -50..50 to canvas y
+      const top = 50;
+      const bottom = 450;
+      const ratio = (height - 10 - minHeight) / (maxHeight - minHeight);
+      return bottom - ratio * (bottom - top);
+    }
+
+    function drawNumbers() {
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 2;
+      ctx.font = '14px Comic Sans MS';
+      ctx.textAlign = 'right';
+      for (let h = minHeight; h <= maxHeight; h += 10) {
+        const y = heightToY(h);
+        ctx.beginPath();
+        ctx.moveTo(50, y);
+        ctx.lineTo(70, y);
+        ctx.stroke();
+        ctx.fillText(h > 0 ? '+' + h : h, 45, y + 5);
+      }
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Hintergrundblasen
+      for (let i = 0; i < 30; i++) {
+        ctx.fillStyle = 'rgba(255,255,255,0.2)';
+        const bx = (i * 30 + (Date.now() / 30)) % canvas.width;
+        const by = (i * 40 + (Date.now() / 40)) % canvas.height;
+        ctx.beginPath();
+        ctx.arc(bx, by, 3, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      animOffset = Math.sin(Date.now() / 500) * 5;
+
+      drawNumbers();
+      drawDiver(100, diverY + animOffset);
+      drawTarget(heightToY(targetHeight));
+    }
+
+    function animate() {
+      draw();
+      if (gameActive) requestAnimationFrame(animate);
+    }
+
+    newTask();
+    diverY = heightToY(currentHeight);
+    animate();
+
+    document.getElementById('answer').addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') checkAnswer();
+    });
+  </script>
+</body>
+</html>
