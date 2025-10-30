@@ -62,6 +62,15 @@
   <script>
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
+	
+	const coin = {
+      x: 100,
+      y: 150,
+      radius: 6,
+      rotation: 0,
+      blinkTimer: 0,
+      blinkInterval: 2 + Math.random() * 3
+    };
 
     let diverY = 250; // aktuelle Y-Position (in Pixeln)
     let currentHeight = 0;
@@ -76,6 +85,85 @@
 
     function randomHeight() {
       return Math.floor(Math.random() * (maxHeight - minHeight + 1)) + minHeight;
+    }
+	
+	function drawCoin(y) {
+	  coin.y = y;
+      ctx.save();
+      ctx.translate(coin.x, coin.y);
+      ctx.rotate(coin.rotation);
+
+      // 3D-ähnliche Skalierung für Dreh-Effekt
+      const scaleX = Math.abs(Math.cos(coin.rotation));
+      ctx.scale(scaleX, 1);
+
+      // goldener Verlauf
+      const grad = ctx.createLinearGradient(-coin.radius, 0, coin.radius, 0);
+      grad.addColorStop(0, "#f6e27a");
+      grad.addColorStop(0.25, "#ffcc33");
+      grad.addColorStop(0.5, "#ffb300");
+      grad.addColorStop(0.75, "#ffcc33");
+      grad.addColorStop(1, "#f6e27a");
+
+      // Hauptkörper
+      ctx.beginPath();
+      ctx.arc(0, 0, coin.radius, 0, Math.PI * 2);
+      ctx.fillStyle = grad;
+      ctx.fill();
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = "#c68a00";
+      ctx.stroke();
+
+      // Kante simulieren
+      ctx.beginPath();
+      ctx.arc(0, 0, coin.radius * 0.85, 0, Math.PI * 2);
+      ctx.strokeStyle = "rgba(0,0,0,0.15)";
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+
+      // Symbol oder Stern
+      ctx.fillStyle = "rgba(70,40,0,0.8)";
+      ctx.font = `${coin.radius}px sans-serif`;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText("★", 0, 0);
+
+      // Glanz-Reflex (bewegt sich leicht)
+      const shineX = Math.sin(Date.now() / 600) * coin.radius * 0.3;
+      const shineY = -coin.radius * 0.3;
+      const shineGrad = ctx.createRadialGradient(shineX, shineY, 0, shineX, shineY, coin.radius * 0.8);
+      shineGrad.addColorStop(0, "rgba(255,255,255,0.6)");
+      shineGrad.addColorStop(1, "rgba(255,255,255,0)");
+      ctx.fillStyle = shineGrad;
+      ctx.beginPath();
+      ctx.arc(0, 0, coin.radius, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Glitzern/Blinken
+      if (coin.blinkTimer < 0.25) {
+        ctx.fillStyle = "rgba(255,255,255," + (0.8 - coin.blinkTimer * 5) + ")";
+        ctx.beginPath();
+        ctx.arc(0, 0, coin.radius, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      ctx.restore();
+    }
+
+	let lastTime = Date.now();
+    function updateCoin() {
+	  // const dt = (time - lastTime) / 1000 || 0;
+	  const dt = (Date.now() - lastTime) / 1000;
+	  lastTime = Date.now();
+      // lastTime = time;
+      coin.rotation += 3 * dt; // Drehgeschwindigkeit
+      if (coin.rotation > Math.PI * 2) coin.rotation -= Math.PI * 2;
+
+      coin.blinkTimer += dt;
+      if (coin.blinkTimer > coin.blinkInterval) {
+        coin.blinkTimer = 0;
+        coin.blinkInterval = 1.5 + Math.random() * 2.5;
+      }
     }
 
     function newTask() {
@@ -152,7 +240,7 @@
       ctx.strokeStyle = '#76ff03';
       ctx.lineWidth = 4;
       ctx.beginPath();
-      ctx.rect(130, y - 20, 50, 40);
+      ctx.rect(80, y - 20, 50, 0);
       ctx.stroke();
     }
 
@@ -196,7 +284,10 @@
 
       drawNumbers();
       drawDiver(100, diverY + animOffset);
-      drawTarget(heightToY(targetHeight));
+	  // replaced by coin
+      // drawTarget(heightToY(targetHeight));
+	  updateCoin()
+	  drawCoin(heightToY(targetHeight))
     }
 
     function animate() {
